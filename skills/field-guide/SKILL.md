@@ -61,7 +61,7 @@ Density is good, as long as it stays legible. Don't put one sentence in a big bo
    - Progress toward a limit → `rings` or `meter`.
    - A choice between options → `compare`. A recommendation goes in a `callout`.
    - A plan over time → `timeline` or `week`. A schedule of short entries → `timeline(items, compact=True)`: one row each, with an optional `cal=dict(date=…)` 6th element.
-   - **Many dated events** → **`agenda(events)`**: day groups packed into balanced columns, one dense row per event. Never per-day cards in a grid (uneven columns, big gaps).
+   - **Many dated events** → **`agenda(events)`**: days in calendar rows that read left → right, one dense row per event; busy days fold after 6 behind "+N more" (`fold_after=`). Never per-day cards in a grid (uneven columns, big gaps).
    - Any dated event can carry **`addcal(title, 'YYYY-MM-DD', start=, end=, venue=, url=)`**: it downloads a one-event `.ics` that opens in any calendar app. `icon=True` gives a round button for dense rows.
    - How-to → `steps`. Detail most readers skip → `fold` or `tabs`.
    - Things with pictures → `icard` in `grid(items, cols=N)`. Pick N so it divides the item count (6 → 3).

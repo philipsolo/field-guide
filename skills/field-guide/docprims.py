@@ -256,7 +256,7 @@ def timeline(items, compact=False) -> str:
             out.append(f'<a class="tl go rv"{_aid(what)} style="--c:{c}" {_link(href)}>{inner}</a>' if href else f'<div class="tl rv"{_aid(what)} style="--c:{c}">{inner}</div>')
     return f'<div class="timeline{" compact" if compact else ""}">{"".join(out)}</div>'
 
-def agenda(events, min_col=420, cal=True) -> str:
+def agenda(events, min_col=420, cal=True, fold_after=6) -> str:
     """Many dated events, grouped by day and packed into balanced columns (no tall uneven cards, no dead space).
     events: dicts {date 'YYYY-MM-DD', title, start?, end?, end_date?, meta? (small line), venue?, url?, detail?, cal? (False = no button)}."""
     from datetime import date as _d
@@ -275,7 +275,9 @@ def agenda(events, min_col=420, cal=True) -> str:
             btn = addcal(e['title'], d, icon=True, start=e.get('start'), end=e.get('end') if e.get('start') else None, end_date=e.get('end_date'),
                          venue=e.get('venue') or '', url=e.get('url') or '', detail=e.get('detail') or '') if cal and e.get('cal', True) is not False else '<span></span>'
             rows.append(f'<li class="ag-row"{_aid(e["title"])}><span class="ag-t">{when}</span>{cell}{btn}</li>')
-        out.append(f'<section class="ag-day rv" aria-label="{dd:%A %-d %B}"><h3>{dd:%a %-d %b}<span>{len(evs)}</span></h3><ul>{"".join(rows)}</ul></section>')
+        out.append(f'<section class="ag-day rv" data-date="{d}" aria-label="{dd:%A %-d %B}"><h3>{dd:%a %-d %b}<span>{len(evs)}</span></h3><ul>{"".join(rows[:fold_after] if fold_after and len(rows) > fold_after + 1 else rows)}</ul>'
+                   + (f'<details class="ag-more"><summary><span class="mo">+{len(rows) - fold_after} more</span><span class="le">Show fewer</span></summary><ul>{"".join(rows[fold_after:])}</ul></details>'
+                      if fold_after and len(rows) > fold_after + 1 else '') + '</section>')
     return f'<div class="agenda" style="--agw:{min_col}px">{"".join(out)}</div>'
 
 def compare(cols) -> str:

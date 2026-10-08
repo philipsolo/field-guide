@@ -380,8 +380,13 @@ a.mini:hover{border-color:var(--line-2);box-shadow:var(--shadow-lift)}
 .timeline.compact .tl-a .what::after{content:" →";color:var(--accent-ink)}
 @media (max-width:640px){.timeline.compact .tl-a,.timeline.compact a.tl.go,.timeline.compact div.tl:not(.has-cal){grid-template-columns:1fr}.timeline.compact .when{grid-row:auto}}
 /* agenda: day groups packed into balanced columns */
-.agenda{columns:var(--agw,420px) 3;column-gap:16px}
-.ag-day{break-inside:avoid;margin:0 0 16px;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow);padding:6px 6px 4px}
+.agenda{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(var(--agw,420px),100%),1fr));gap:16px;align-items:start}
+/* calendar order: rows of days read left → right; long days fold after N events (agenda(fold_after=)) so rows stay even */
+.ag-more>summary{list-style:none;cursor:pointer;padding:8px 10px;margin:2px 0 4px;border-radius:10px;font:600 12.5px var(--sans);color:var(--accent-ink);border-top:1px solid color-mix(in srgb,var(--line) 70%,transparent)}
+.ag-more>summary::-webkit-details-marker{display:none}
+.ag-more>summary:hover{background:var(--surface-2)}
+.ag-more[open]>summary .mo{display:none}.ag-more:not([open])>summary .le{display:none}
+.ag-day{margin:0;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow);padding:6px 6px 4px}
 .ag-day h3{display:flex;justify-content:space-between;align-items:baseline;margin:0;padding:8px 10px 6px;font:600 15px var(--sans);border-bottom:1px solid var(--line)}
 .ag-day h3 span{font:500 11.5px var(--mono);color:var(--muted)}
 .ag-day ul{list-style:none;margin:0;padding:0}
