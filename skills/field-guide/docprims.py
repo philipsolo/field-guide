@@ -213,14 +213,70 @@ def tabs(name, panels) -> str:
     pn = ''.join(f'<div class="panel p{i}">{b}</div>' for i, (_, b) in enumerate(panels))
     return f'<div class="tabs"><style>{css}</style>{"".join(out)}{pn}</div>'
 
-def timeline(items) -> str:
-    """items: (when, what, body, color?, href?) — with href the whole entry is clickable."""
+def ics_uri(title, date, start=None, end=None, venue='', url='', detail='', end_date=None) -> str:
+    """A one-event .ics file as a data: URI (opens/imports in any calendar app). date='YYYY-MM-DD', start/end='HH:MM' (local)."""
+    from urllib.parse import quote
+    d = date.replace('-', ''); now = '20000101T000000Z'
+    if start:
+        dt = f'DTSTART:{d}T{start.replace(":", "")}00\r\n' + (f'DTEND:{(end_date or date).replace("-", "")}T{end.replace(":", "")}00\r\n' if end else '')
+    else:
+        from datetime import date as _d, timedelta
+        last = _d.fromisoformat(end_date or date) + timedelta(days=1)
+        dt = f'DTSTART;VALUE=DATE:{d}\r\nDTEND;VALUE=DATE:{last:%Y%m%d}\r\n'
+    clean = lambda s: str(s or '').replace('\\', '\\\\').replace(',', '\\,').replace(';', '\\;').replace('\n', '\\n')
+    uid = hashlib.md5(f'{title}{date}{start}'.encode()).hexdigest()
+    ics = ('BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//field-guide//EN\r\nBEGIN:VEVENT\r\n'
+           f'UID:{uid}@field-guide\r\nDTSTAMP:{now}\r\n{dt}SUMMARY:{clean(title)}\r\n'
+           + (f'LOCATION:{clean(venue)}\r\n' if venue else '') + (f'URL:{url}\r\n' if url else '')
+           + (f'DESCRIPTION:{clean(detail)}\r\n' if detail else '') + 'END:VEVENT\r\nEND:VCALENDAR\r\n')
+    return 'data:text/calendar;charset=utf-8,' + quote(ics)
+
+def addcal(title, date, label='Add to calendar', icon=False, **kw) -> str:
+    """"+ Add to calendar": downloads a one-event .ics for any calendar app. icon=True → round button for dense rows."""
+    kw.pop('tags', None)
+    fname = re.sub(r'[^a-z0-9]+', '-', title.lower()).strip('-')[:40] or 'event'
+    a11y = f' aria-label="Add “{esc(title)}” to calendar" title="Add to calendar"' if icon else ''
+    return (f'<a class="addcal{" ico" if icon else ""}" href="{esc(ics_uri(title, date, **kw))}" download="{fname}.ics"{a11y}>'
+            f'{"" if icon else esc(label)}</a>')
+
+def timeline(items, compact=False) -> str:
+    """items: (when, what, body, color?, href?, cal?) — with href the whole entry is clickable;
+    cal = dict(date='YYYY-MM-DD', start=, end=, venue=, url=, detail=, title=) adds an "Add to calendar" button.
+    compact=True: one row per entry (date | title + detail | round calendar button) — for schedules of short entries."""
     out = []
     for it in items:
         when, what, body = it[:3]; c = it[3] if len(it) > 3 and it[3] else 'var(--accent)'; href = it[4] if len(it) > 4 else ''
+        cal = it[5] if len(it) > 5 else None
         inner = f'<div class="when">{when}</div><div class="what">{what}</div><p>{body}</p>'
-        out.append(f'<a class="tl go rv"{_aid(what)} style="--c:{c}" {_link(href)}>{inner}</a>' if href else f'<div class="tl rv"{_aid(what)} style="--c:{c}">{inner}</div>')
-    return f'<div class="timeline">{"".join(out)}</div>'
+        if cal:
+            kw = dict(cal); t_ = kw.pop('title', re.sub(r'<[^>]+>', '', what)); d = kw.pop('date'); kw.setdefault('url', href)
+            head = f'<a class="tl-a" {_link(href)}>{inner}</a>' if href else f'<div class="tl-a">{inner}</div>'
+            out.append(f'<div class="tl has-cal rv"{_aid(what)} style="--c:{c}">{head}{addcal(t_, d, icon=compact, **kw)}</div>')
+        else:
+            out.append(f'<a class="tl go rv"{_aid(what)} style="--c:{c}" {_link(href)}>{inner}</a>' if href else f'<div class="tl rv"{_aid(what)} style="--c:{c}">{inner}</div>')
+    return f'<div class="timeline{" compact" if compact else ""}">{"".join(out)}</div>'
+
+def agenda(events, min_col=420, cal=True) -> str:
+    """Many dated events, grouped by day and packed into balanced columns (no tall uneven cards, no dead space).
+    events: dicts {date 'YYYY-MM-DD', title, start?, end?, end_date?, meta? (small line), venue?, url?, detail?, cal? (False = no button)}."""
+    from datetime import date as _d
+    days = {}
+    for e in events:
+        days.setdefault(e['date'], []).append(e)
+    out = []
+    for d, evs in sorted(days.items()):
+        dd = _d.fromisoformat(d)
+        rows = []
+        for e in sorted(evs, key=lambda x: (x.get('start') or '00:00', x['title'])):
+            when = (e.get('start') or 'all day') + (f"–{e['end']}" if e.get('end') and e.get('start') else '')
+            meta = e.get('meta') or e.get('venue') or ''
+            main = f'<b>{esc(e["title"])}</b>{f"<small>{meta}</small>" if meta else ""}'
+            cell = f'<a class="ag-main" {_link(e["url"])}>{main}</a>' if e.get('url') else f'<div class="ag-main">{main}</div>'
+            btn = addcal(e['title'], d, icon=True, start=e.get('start'), end=e.get('end') if e.get('start') else None, end_date=e.get('end_date'),
+                         venue=e.get('venue') or '', url=e.get('url') or '', detail=e.get('detail') or '') if cal and e.get('cal', True) is not False else '<span></span>'
+            rows.append(f'<li class="ag-row"{_aid(e["title"])}><span class="ag-t">{when}</span>{cell}{btn}</li>')
+        out.append(f'<section class="ag-day rv" aria-label="{dd:%A %-d %B}"><h3>{dd:%a %-d %b}<span>{len(evs)}</span></h3><ul>{"".join(rows)}</ul></section>')
+    return f'<div class="agenda" style="--agw:{min_col}px">{"".join(out)}</div>'
 
 def compare(cols) -> str:
     """cols: dicts {title, tag?, body?, pros[], cons[], pick?, href?} — with href the whole column is clickable."""
@@ -440,6 +496,15 @@ def gallery(out):
     ch += meter('Budget used', 62, 100, '$62 / $100', mark=80, mark_label='soft cap')
     body += section('g3', 3, 'Charts', ch, 'Apache ECharts: hover tooltips, click legends to toggle, animated on scroll, re-rendered after live-share saves and theme changes.')
     st = timeline([('Week 1–2', 'Start', 'Set up and learn.'), ('Week 3–8', 'Build', 'Add one thing at a time.', 'var(--s3)'), ('Week 9+', 'Review', 'Measure and adjust.', 'var(--s2)')])
+    st += '<h3>timeline(compact=True): one row each, round .ics button</h3>' + timeline([
+        ('Sat 10 Oct · 15:00–17:00', 'Kick-off session', 'Free, open to all.', 'var(--s1)', 'https://example.com', dict(date='2026-10-10', start='15:00', end='17:00', venue='Main hall')),
+        ('Sun 11 Oct', 'Practice day', 'Bring your own kit.', 'var(--s2)', '', dict(date='2026-10-11')),
+        ('End of week 1', 'Teams announced', 'By email.', 'var(--s3)')], compact=True)
+    st += '<h3>agenda(): many dated events, packed by day</h3>' + agenda([
+        dict(date='2026-10-12', title='Intro talk', start='18:00', end='19:00', meta='Room 1 · Club A', url='https://example.com'),
+        dict(date='2026-10-12', title='Open session', meta='Sports centre · Club B'),
+        dict(date='2026-10-13', title='Taster evening', start='19:30', meta='Pub · Club C', url='https://example.com'),
+        dict(date='2026-10-14', title='Trials', start='09:00', end='12:00', meta='Track · Club D')], min_col=300)
     st += compare([dict(title='Option A', tag='pick', pick=True, pros=['Cheap', 'Fast'], cons=['Plain']), dict(title='Option B', pros=['Tasty'], cons=['Pricey', 'Slow'])])
     st += steps(['Do this first.', 'Then this.', 'Then this.'], check=True) + note('<p>note(): any prose goes on a card like this, never straight on the page.</p>') + fold('Fold (accordion)', '<p>Hidden detail.</p>')
     st += tabs('demo', [('Day A', '<p>Panel A</p>'), ('Day B', '<p>Panel B</p>')])

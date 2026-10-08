@@ -351,6 +351,46 @@ a.mini:hover{border-color:var(--line-2);box-shadow:var(--shadow-lift)}
 .viz-tip{font:13px var(--sans)!important;z-index:70!important;max-width:min(320px,calc(100vw - 24px));white-space:normal!important}
 
 
+.addcal{display:inline-flex;align-items:center;gap:6px;min-height:30px;padding:4px 12px;border-radius:999px;border:1px solid var(--line);background:var(--surface);color:var(--ink);font:500 12.5px var(--sans,inherit);text-decoration:none;white-space:nowrap}
+.addcal::before{content:"+";font-weight:700;color:var(--accent-ink)}
+.addcal:hover{border-color:var(--accent);background:var(--surface-2)}
+.tl.has-cal{display:grid;gap:6px;justify-items:start}
+.tl.has-cal>.tl-a{display:block;width:100%;color:inherit;text-decoration:none;border-radius:10px;margin:0 -10px;padding:6px 10px 2px;box-sizing:content-box}
+.tl.has-cal>.tl-a:hover{background:var(--surface-2)}.tl.has-cal>.tl-a .what::after{content:" →";color:var(--accent-ink)}
+.tl.has-cal::before{top:11px}
+.tl.has-cal>.addcal{margin-bottom:6px}
+@media print{.addcal{display:none}}
+/* round calendar button for dense rows */
+.addcal.ico{width:32px;height:32px;min-height:0;padding:0;justify-content:center;border-radius:50%;flex:none}
+.addcal.ico::before{content:"";width:16px;height:16px;background:currentColor;color:var(--accent-ink);
+  -webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round'%3E%3Crect x='3' y='5' width='18' height='16' rx='3'/%3E%3Cpath d='M3 10h18M8 3v4M16 3v4M12 13v5M9.5 15.5h5'/%3E%3C/svg%3E") center/contain no-repeat;
+  mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round'%3E%3Crect x='3' y='5' width='18' height='16' rx='3'/%3E%3Cpath d='M3 10h18M8 3v4M16 3v4M12 13v5M9.5 15.5h5'/%3E%3C/svg%3E") center/contain no-repeat}
+/* compact timeline: one row per entry */
+.timeline.compact{padding:10px 18px 10px 46px}
+.timeline.compact::before{left:26px;top:22px;bottom:22px}
+.timeline.compact .tl{padding:9px 0;border-bottom:1px solid var(--line)}
+.timeline.compact .tl:last-child{border-bottom:0}
+.timeline.compact .tl::before{left:-26px;top:13px;width:12px;height:12px;border-width:2.5px}
+.timeline.compact .tl.has-cal{display:grid;grid-template-columns:1fr auto;gap:12px;align-items:center}
+.timeline.compact .tl-a,.timeline.compact a.tl.go,.timeline.compact div.tl:not(.has-cal){display:grid;grid-template-columns:minmax(150px,220px) 1fr;column-gap:18px;align-items:baseline;color:inherit;text-decoration:none}
+.timeline.compact .when{grid-row:1/3;font-size:12.5px}
+.timeline.compact .tl p{margin:1px 0 0;font-size:13.5px}
+.timeline.compact a.tl.go{margin:0;padding:9px 0}
+.timeline.compact .tl-a:hover .what,.timeline.compact a.tl.go:hover .what{color:var(--accent-ink)}
+.timeline.compact .tl-a .what::after{content:" →";color:var(--accent-ink)}
+@media (max-width:640px){.timeline.compact .tl-a,.timeline.compact a.tl.go,.timeline.compact div.tl:not(.has-cal){grid-template-columns:1fr}.timeline.compact .when{grid-row:auto}}
+/* agenda: day groups packed into balanced columns */
+.agenda{columns:var(--agw,420px) 3;column-gap:16px}
+.ag-day{break-inside:avoid;margin:0 0 16px;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow);padding:6px 6px 4px}
+.ag-day h3{display:flex;justify-content:space-between;align-items:baseline;margin:0;padding:8px 10px 6px;font:600 15px var(--sans);border-bottom:1px solid var(--line)}
+.ag-day h3 span{font:500 11.5px var(--mono);color:var(--muted)}
+.ag-day ul{list-style:none;margin:0;padding:0}
+.ag-row{display:grid;grid-template-columns:94px 1fr auto;gap:10px;align-items:center;padding:7px 10px;border-radius:10px;max-width:none;margin:0}
+.ag-row+.ag-row{border-top:1px solid color-mix(in srgb,var(--line) 70%,transparent)}
+.ag-row:hover{background:var(--surface-2)}
+.ag-t{font:500 12px/1.3 var(--mono);color:var(--muted);font-variant-numeric:tabular-nums}
+@media (max-width:520px){.ag-t{font-size:11px}}
+
 /* ---------- floating section rail (auto-built from section.sec; dim while reading, expands on hover) ---------- */
 .rail{position:fixed;right:12px;top:50%;transform:translateY(-50%);z-index:45;display:flex;flex-direction:column;gap:1px;padding:10px 8px;border-radius:14px;border:1px solid transparent;opacity:.6;transition:opacity .35s,background .2s,box-shadow .2s,border-color .2s;max-height:80vh;overflow-y:auto;scrollbar-width:none}
 .rail::-webkit-scrollbar{display:none}

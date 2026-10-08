@@ -34,7 +34,7 @@ Density is good, as long as it stays legible. Don't put one sentence in a big bo
 
 | File | Use |
 |---|---|
-| `docprims.py` | Builders that each return an HTML string. Structure: `hero`, `toc`, `section`, `split`, `grid`, `card`, `masonry`, `fold`, `tabs`. Content: `stats`, `points` (href), `note`, `callout`, `icard`, `mini`/`minis`, `mrow`, `table`, `steps` (check), `timeline` (href), `compare` (href), `week`, `figure`, `pull`, `kv`, `tag`. Charts: `columns`, `line`, `donut`, `rings`, `hbars`, `meter`, `echart` (raw ECharts escape hatch). Images: `img_uri`, `svg_uri`. Output: `page`. |
+| `docprims.py` | Builders that each return an HTML string. Structure: `hero`, `toc`, `section`, `split`, `grid`, `card`, `masonry`, `fold`, `tabs`. Content: `stats`, `points` (href), `note`, `callout`, `agenda`, `addcal` (.ics),  `icard`, `mini`/`minis`, `mrow`, `table`, `steps` (check), `timeline` (href), `compare` (href), `week`, `figure`, `pull`, `kv`, `tag`. Charts: `columns`, `line`, `donut`, `rings`, `hbars`, `meter`, `echart` (raw ECharts escape hatch). Images: `img_uri`, `svg_uri`. Output: `page`. |
 | `template.html` | Design tokens (light + dark), the CSS for every primitive, CSS-only motion, print CSS, the toolbar (edit/theme/pdf), the auto section rail, and the ECharts renderer. |
 | `python3 docprims.py --gallery out.html` | Renders every primitive. Open it before designing a doc. |
 | `scripts/verify.mjs` | The self-verifier (see Verify). Needs Playwright: `npm i -D playwright && npx playwright install chromium`. |
@@ -60,7 +60,10 @@ Density is good, as long as it stays legible. Don't put one sentence in a big bo
    - Parts of a whole (≤6 parts) → `donut`.
    - Progress toward a limit → `rings` or `meter`.
    - A choice between options → `compare`. A recommendation goes in a `callout`.
-   - A plan over time → `timeline` or `week`. How-to → `steps`. Detail most readers skip → `fold` or `tabs`.
+   - A plan over time → `timeline` or `week`. A schedule of short entries → `timeline(items, compact=True)`: one row each, with an optional `cal=dict(date=…)` 6th element.
+   - **Many dated events** → **`agenda(events)`**: day groups packed into balanced columns, one dense row per event. Never per-day cards in a grid (uneven columns, big gaps).
+   - Any dated event can carry **`addcal(title, 'YYYY-MM-DD', start=, end=, venue=, url=)`**: it downloads a one-event `.ics` that opens in any calendar app. `icon=True` gives a round button for dense rows.
+   - How-to → `steps`. Detail most readers skip → `fold` or `tabs`.
    - Things with pictures → `icard` in `grid(items, cols=N)`. Pick N so it divides the item count (6 → 3).
 4. **Images:**
    - `img_uri(path, max_px)` resizes and embeds as base64, using Pillow, else `sips`, else raw. Sizes: cards 480, figures 1200, hero 1800. Keep the page under about 2–3 MB.

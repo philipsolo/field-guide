@@ -204,7 +204,7 @@ for (const theme of ['light', 'dark']) for (const w of widths) {
       if (getComputedStyle(e).cursor === 'pointer' && !interactive(e) && nFake++ < 4) out.fail.push(`looks clickable (cursor:pointer) but does nothing: ${name(e)}`); }
     for (const item of main.querySelectorAll('li,.point,.mini,.tl,.compare .col,.icard,.mrow,.stat,.card,.note,dl.kv>dd')) {
       if (!vis(item) || item.matches('a') || item.closest('a,.tablewrap,.toc') || item.querySelector('input,button,select,textarea')) continue;
-      const links = [...item.querySelectorAll('a[href]')]; if (links.length !== 1) continue;
+      const links = [...item.querySelectorAll('a[href]:not(.addcal)')]; if (links.length !== 1) continue;  // calendar buttons are extra actions, not the item's link
       const own = item.textContent.trim().length, inLink = links[0].textContent.trim().length;
       if (own < 160 && inLink / own < 0.6) out.fail.push(`only part of this bullet is clickable — make the whole item the link (href= on the primitive): ${name(item)}`);
     }
