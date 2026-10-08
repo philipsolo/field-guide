@@ -1,0 +1,12 @@
+{
+  "name": "field-guide-skill",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "gallery": "python3 skills/field-guide/docprims.py --gallery examples/gallery.html",
+    "verify": "node skills/field-guide/scripts/verify.mjs"
+  },
+  "devDependencies": {
+    "playwright": "^1.63.0"
+  }
+}

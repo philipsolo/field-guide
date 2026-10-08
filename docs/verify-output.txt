@@ -1,0 +1,2 @@
+
+PASS: 0 distinct failures, 0 warnings (390/768/1280/1512/1920px × light/dark)
