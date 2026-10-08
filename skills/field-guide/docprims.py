@@ -329,6 +329,17 @@ def line(xlabels, series, title='', sub='', unit='', ymin=None, ymax=None, heigh
             d['markArea'] = {'silent': True, 'itemStyle': {'color': 'var(--s3)', 'opacity': .13},
                              'label': {'color': 'var(--ink-2)', 'position': 'insideTopLeft', 'fontSize': 12}, 'data': [[{'yAxis': band[0], 'name': band[2]}, {'yAxis': band[1]}]]}
         ser.append(d)
+    # end labels of lines that finish close together would overlap: nudge them apart (ECharts doesn't move endLabels)
+    ends = [(k, sr[1][-1]) for k, sr in enumerate(series) if sr[1] and sr[1][-1] is not None]
+    if len(ends) > 1:
+        vals = [v for sr in series for v in sr[1] if v is not None]
+        lo = ymin if ymin is not None else min(vals); hi = ymax if ymax is not None else max(vals)
+        ppu = (height - 70 - 24 * len(series)) / ((hi - lo) or 1)  # px per unit, conservative (phones add legend rows)
+        ys = sorted(((-(v - lo) * ppu, k) for k, v in ends))  # screen y (top = smaller)
+        placed = []
+        for y0, k in ys:
+            y1 = max(y0, placed[-1][0] + 17) if placed else y0
+            placed.append((y1, k)); ser[k]['endLabel']['offset'] = [0, round(y1 - y0)]
     y = {'type': 'value', 'scale': True}
     if ymin is not None: y['min'] = ymin
     if ymax is not None: y['max'] = ymax

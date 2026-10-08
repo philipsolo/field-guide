@@ -26,6 +26,7 @@ Density is good, as long as it stays legible. Don't put one sentence in a big bo
 
 **2. Bullets that do something are clickable as a whole item.** If a bullet points somewhere, the entire item is the link, with hover and an arrow, never a small text link inside it.
 - A point, timeline entry, compare column, card or mini that refers to a section, a card or a page → pass `href=` (`'#section-id'` stays in the page; external URLs open a new tab). Give targets an id (`icard(..., id='m-x')`).
+- A plain list item that points somewhere → wrap the whole item: `<li><a class="row" href="#id">…</a></li>` (full-row hover + arrow).
 - How-to steps the reader will follow → `steps(items, check=True)`: each row is clickable and ticks off.
 - Nothing may *look* clickable (pointer cursor, hover lift, arrow) without doing something.
 

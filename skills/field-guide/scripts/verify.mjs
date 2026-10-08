@@ -146,7 +146,7 @@ for (const theme of ['light', 'dark']) for (const w of widths) {
       const fit = getComputedStyle(img).objectFit;
       if (fit === 'fill' && Math.abs(ir.width / ir.height - img.naturalWidth / img.naturalHeight) > 0.04 * (img.naturalWidth / img.naturalHeight)) out.warn.push(`stretched image alt="${img.alt}"`);
       if (img.closest('.icard,figure') && ir.width < 120) out.warn.push(`card image only ${ir.width.toFixed(0)}px wide alt="${img.alt}"`);
-      if (!img.alt) out.noAlt = (out.noAlt || 0) + 1;
+      if (!img.hasAttribute('alt')) out.noAlt = (out.noAlt || 0) + 1; // alt="" = decorative, which is fine
     }
     if (out.noAlt) out.fail.push(`${out.noAlt} image(s) without alt text`);
     // grids: orphaned last row
