@@ -160,6 +160,32 @@ for (const theme of ['light', 'dark']) for (const w of widths) {
     for (const b of document.querySelectorAll('.hero,.toc')) { if (!vis(b)) continue; const r = b.getBoundingClientRect(); const cw = document.documentElement.clientWidth;
       const want = b.matches('.toc') && getComputedStyle(b).position === 'sticky' ? null : cw;
       if (Math.abs(r.left) > 2 || (want && Math.abs(r.right - want) > 2)) out.fail.push(`${b.matches('.hero') ? 'hero' : 'section nav'} is not full-bleed: spans ${Math.round(r.left)}–${Math.round(r.right)}px of ${cw}px`); }
+    // bare text: every piece of body text must sit on a surface (card, callout, table, chart…), never straight on the page
+    const pageBg = getComputedStyle(document.body).backgroundColor;
+    const onSurface = e => { for (let x = e; x && x !== main && x !== document.body; x = x.parentElement) {
+      const s = getComputedStyle(x), bg = s.backgroundColor, m = bg.match(/[\d.]+/g);
+      if (m && (m[3] === undefined || +m[3] > 0.5) && bg !== pageBg) return true;
+      if (s.backgroundImage !== 'none' && x.matches('.hero,.hero *')) return true; } return false; };
+    let nBare = 0;
+    for (const e of textEls) {
+      if (e.closest('h1,h2,h3,h4,.sec-head,.hero,.toc,.rail,.toolbar,.kicker,.skip') || e.matches('h1,h2,h3,h4')) continue;
+      if (!onSurface(e) && nBare++ < 6) out.fail.push(`bare text on the page (put it in a card/callout/note): ${name(e)}`);
+    }
+    if (nBare > 6) out.fail.push(`…and ${nBare - 6} more bare text blocks`);
+    // clickability: whatever looks clickable must be, and a bullet that links somewhere must be clickable as a whole
+    const interactive = e => e.closest('a[href],button,label,summary,input,select,textarea,[onclick],[role=button],[tabindex]');
+    let nFake = 0;
+    for (const e of main.querySelectorAll('*')) { if (!vis(e) || e.closest('.viz,svg')) continue;
+      if (getComputedStyle(e).cursor === 'pointer' && !interactive(e) && nFake++ < 4) out.fail.push(`looks clickable (cursor:pointer) but does nothing: ${name(e)}`); }
+    for (const item of main.querySelectorAll('li,.point,.mini,.tl,.compare .col,.icard,.mrow,.stat,.card,.note,dl.kv>dd')) {
+      if (!vis(item) || item.matches('a') || item.closest('a,.tablewrap,.toc') || item.querySelector('input,button,select,textarea')) continue;
+      const links = [...item.querySelectorAll('a[href]')]; if (links.length !== 1) continue;
+      const own = item.textContent.trim().length, inLink = links[0].textContent.trim().length;
+      if (own < 160 && inLink / own < 0.6) out.fail.push(`only part of this bullet is clickable — make the whole item the link (href= on the primitive): ${name(item)}`);
+    }
+    for (const a of main.querySelectorAll('a[href^="#"]')) { const id = decodeURIComponent(a.getAttribute('href').slice(1)); if (id && !document.getElementById(id)) out.fail.push(`link to #${id} goes nowhere: ${name(a)}`); }
+    for (const a of main.querySelectorAll('a[href],button,label')) { if (!vis(a)) continue; const r = a.getBoundingClientRect(); const inline = a.matches('a') && a.parentElement && /^(P|LI|TD|DD|SPAN|SMALL|FIGCAPTION|DIV)$/.test(a.parentElement.tagName) && a.parentElement.textContent.trim().length > a.textContent.trim().length + 10;
+      if (!inline && (r.width < 24 || r.height < 24) && !a.closest('.footer,.viz')) out.warn.push(`small click target ${Math.round(r.width)}×${Math.round(r.height)}px: ${name(a)}`); }
     // balance: side-by-side columns should end roughly level (no tall photo next to a short chart)
     for (const s of main.querySelectorAll('.split')) {
       if (!vis(s)) continue; const cols = [...s.children].filter(vis); if (cols.length < 2) continue;

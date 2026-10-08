@@ -11,6 +11,10 @@ LLMs can already write HTML. What usually goes wrong is the last 10%:
 - a toolbar covering the nav on a phone,
 - a hero that floats with uneven margins on a wide monitor.
 
+Two house rules the skill enforces:
+- **No bare text.** Body copy always sits on a surface: card, callout, alert, table or chart.
+- **Clickable bullets are clickable whole.** If a bullet points somewhere, the entire item is the link (hover state, arrow). Follow-along steps tick off when tapped.
+
 This skill gives the model:
 
 1. **A design system.** Editorial type, a colour-blind-checked chart palette, real light and dark themes, CSS-only motion, print/PDF styles.
@@ -47,6 +51,8 @@ node skills/field-guide/scripts/verify.mjs page.html --shots shots/
 | chrome | hero or nav not full-bleed · toolbar over the hero or over the sticky nav once scrolled · rail over content · anchor jumps hiding headings |
 | media | broken images, missing alt (WARN: stretched, tiny or oversized images) |
 | balance | WARN: side-by-side columns ending far apart, or a grid's last row ≤ half full |
+| surfaces | **bare text straight on the page**: body text must sit on a card, callout, table, chart or other surface |
+| clicks | looks clickable but isn't · **only part of a bullet is a link** · `#anchor` links to nothing (WARN: targets < 24 px) |
 | other | page/console errors (WARN: contrast < 3:1, skipped heading levels) |
 
 Every check exists because it caught a real bug in a real generated page. A full run takes about 10 minutes (every chart is hovered at every width); `--quick` runs 390 px and 1512 px only, in about 2.

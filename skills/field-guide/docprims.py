@@ -123,6 +123,14 @@ def grid(items, min_px=260, cols=None) -> str:
         return f'<div class="grid fixed" style="--cols:{cols}">{"".join(items)}</div>'
     return f'<div class="grid" style="--min:{min_px}px">{"".join(items)}</div>'
 def card(body, cls='') -> str: return f'<div class="card rv {cls}">{body}</div>'
+def _link(href):
+    """Attributes for a whole-item link: in-page anchors stay in the tab, external links open a new one."""
+    return f'href="{esc(href)}"' + ('' if href.startswith('#') else ' target="_blank" rel="noopener"')
+
+def note(body, title='') -> str:
+    """Prose on a card. Use for any paragraph/list that isn't a callout — text never sits bare on the page."""
+    return f'<div class="note rv">{f"<h4>{title}</h4>" if title else ""}{body}</div>'
+
 def tag(text, kind='') -> str: return f'<span class="tag {kind}">{text}</span>'
 def dot(color) -> str: return f'<span class="dot" style="--c:{color}" aria-hidden="true"></span>'
 
@@ -143,7 +151,7 @@ def stats(items) -> str:
     n = len(items); cols = n if n <= 4 else (3 if n % 3 == 0 else 4)  # rows always fill: 4 → 4 (2×2 on tablets), 6 → 3+3
     return f'<div class="stats" style="--n:{cols}">{"".join(out)}</div>'
 
-def icard(title, img='', meta='', body='', tags=(), price='', price_sub='', href='', ar='16/10', fit='contain', pad=10) -> str:
+def icard(title, img='', meta='', body='', tags=(), price='', price_sub='', href='', ar='16/10', fit='contain', pad=10, id='') -> str:
     """Big-image card. Product shots: fit=contain,pad=10 on white. Photos: fit=cover,pad=0."""
     im = (f'<div class="img" style="--ar:{ar};--fit:{fit};--pad:{pad}px;background:{"#fff" if fit == "contain" else "var(--surface-2)"}">'
           f'<img src="{img}" alt="{esc(title)}" width="480" height="300"></div>') if img else ''
@@ -153,8 +161,8 @@ def icard(title, img='', meta='', body='', tags=(), price='', price_sub='', href
              f'{f"<div class=m>{meta}</div>" if meta else ""}{f"<div class=small>{body}</div>" if body else ""}'
              f'<div class="foot">{pr}</div></div>')
     if href:
-        return f'<a class="icard rv" href="{esc(href)}" target="_blank" rel="noopener">{inner}</a>'
-    return f'<div class="icard rv">{inner}</div>'
+        return f'<a class="icard rv"{f" id={id}" if id else ""} {_link(href)}>{inner}</a>'
+    return f'<div class="icard rv"{f" id={id}" if id else ""}>{inner}</div>'
 
 def mrow(title, img='', meta='', aside='', aside_sub='', href='', tags=()) -> str:
     th = f'<img class="th" src="{img}" alt="{esc(title)}" width="96" height="96">' if img else '<span></span>'
@@ -174,7 +182,11 @@ def table(headers, rows, num=(), best=None) -> str:
         for i, r in enumerate(rows))
     return f'<div class="tablewrap rv"><table><thead><tr>{th}</tr></thead><tbody>{body}</tbody></table></div>'
 
-def steps(items) -> str: return '<ol class="steps">' + ''.join(f'<li>{s}</li>' for s in items) + '</ol>'
+def steps(items, check=False, name='st') -> str:
+    """Numbered how-to. check=True makes each step a clickable row the reader can tick off (CSS-only)."""
+    if check:
+        return '<ol class="steps check">' + ''.join(f'<li><label><input type="checkbox" name="{name}{i}" aria-label="Done: step {i + 1}">{s}</label></li>' for i, s in enumerate(items)) + '</ol>'
+    return '<ol class="steps">' + ''.join(f'<li>{s}</li>' for s in items) + '</ol>'
 def fold(summary, body, open=False) -> str:
     return f'<details class="fold"{" open" if open else ""}><summary>{summary}</summary><div>{body}</div></details>'
 def figure(img, caption='', alt='', ar='') -> str:
@@ -194,20 +206,23 @@ def tabs(name, panels) -> str:
     return f'<div class="tabs"><style>{css}</style>{"".join(out)}{pn}</div>'
 
 def timeline(items) -> str:
-    """items: (when, what, body, color?)"""
+    """items: (when, what, body, color?, href?) — with href the whole entry is clickable."""
     out = []
     for it in items:
-        when, what, body = it[:3]; c = it[3] if len(it) > 3 else 'var(--accent)'
-        out.append(f'<div class="tl rv" style="--c:{c}"><div class="when">{when}</div><div class="what">{what}</div><p>{body}</p></div>')
+        when, what, body = it[:3]; c = it[3] if len(it) > 3 and it[3] else 'var(--accent)'; href = it[4] if len(it) > 4 else ''
+        inner = f'<div class="when">{when}</div><div class="what">{what}</div><p>{body}</p>'
+        out.append(f'<a class="tl go rv" style="--c:{c}" {_link(href)}>{inner}</a>' if href else f'<div class="tl rv" style="--c:{c}">{inner}</div>')
     return f'<div class="timeline">{"".join(out)}</div>'
 
 def compare(cols) -> str:
-    """cols: dicts {title, tag?, body?, pros[], cons[], pick?}"""
+    """cols: dicts {title, tag?, body?, pros[], cons[], pick?, href?} — with href the whole column is clickable."""
     out = []
     for c in cols:
         li = ''.join(f'<li class="pro">{p}</li>' for p in c.get('pros', ())) + ''.join(f'<li class="con">{p}</li>' for p in c.get('cons', ()))
         tg = tag(c['tag'], 'accent' if c.get('pick') else '') if c.get('tag') else ''
-        out.append(f'<div class="col rv{" pick" if c.get("pick") else ""}"><h4>{c["title"]}{tg}</h4>{"<p class=small>" + c["body"] + "</p>" if c.get("body") else ""}<ul>{li}</ul></div>')
+        cls = f'col rv{" pick" if c.get("pick") else ""}'
+        inner = f'<h4><span>{c["title"]}{"<span class=go></span>" if c.get("href") else ""}</span>{tg}</h4>{"<p class=small>" + c["body"] + "</p>" if c.get("body") else ""}<ul>{li}</ul>'
+        out.append(f'<a class="{cls}" {_link(c["href"])}>{inner}</a>' if c.get('href') else f'<div class="{cls}">{inner}</div>')
     return f'<div class="compare">{"".join(out)}</div>'
 
 def week(cols, rows) -> str:
@@ -219,11 +234,13 @@ def week(cols, rows) -> str:
 # ---------------------------------------------------------------- compact layouts
 def points(items, min_px=250) -> str:
     """Icon + bold lead + one line. USE THIS instead of a grid of boxes that each hold one sentence.
-    items: (icon, lead, text, bg?)"""
+    items: (icon, lead, text, bg?, href?). With href the WHOLE bullet is the link (e.g. '#section-id'):
+    if a bullet points somewhere, make it clickable this way — never a small link inside the text."""
     out = []
     for it in items:
-        ic, lead, text = it[:3]; bg = f' style="--c:{it[3]}"' if len(it) > 3 else ''
-        out.append(f'<div class="point rv"><span class="pi"{bg} aria-hidden="true">{ic}</span><div><b>{lead}</b><p>{text}</p></div></div>')
+        ic, lead, text = it[:3]; bg = f' style="--c:{it[3]}"' if len(it) > 3 and it[3] else ''; href = it[4] if len(it) > 4 else ''
+        inner = f'<span class="pi"{bg} aria-hidden="true">{ic}</span><div><b>{lead}</b><p>{text}</p></div>'
+        out.append(f'<a class="point rv" {_link(href)}>{inner}</a>' if href else f'<div class="point rv">{inner}</div>')
     return f'<div class="points" style="grid-template-columns:repeat(auto-fit,minmax({min_px}px,1fr))">{"".join(out)}</div>'
 
 def mini(title, img='', meta='', aside='', href='', icon='') -> str:
@@ -390,7 +407,7 @@ def gallery(out):
     body += section('g1', 1, 'Stats & callouts', s, 'Stat tiles lead a section with its headline numbers.')
     cards = [icard('Example product', 'data:image/svg+xml,' + '%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 16 10%22%3E%3Crect width=%2216%22 height=%2210%22 fill=%22%23e7f0fb%22/%3E%3C/svg%3E',
                    'One meta line', 'Card body copy.', [('featured', 'accent'), ('tag', '')], '$12', 'per unit', 'https://example.com') for _ in range(3)]
-    pts = points([('⚡', 'Lead with the answer', 'The headline goes first, detail underneath.'), ('📊', 'Show the evidence', 'A chart or stat tile for every claim.'), ('🧭', 'Easy to scan', 'Sticky nav, section rail, folds for detail.'), ('🌗', 'Both themes', 'A real dark palette, not an inversion.')])
+    pts = points([('⚡', 'Lead with the answer', 'The headline goes first, detail underneath.', None, '#g3'), ('📊', 'Show the evidence', 'A chart or stat tile for every claim.'), ('🧭', 'Easy to scan', 'Sticky nav, section rail, folds for detail.'), ('🌗', 'Both themes', 'A real dark palette, not an inversion.')])
     mn = minis([mini('Option one', '', 'short meta line', '$4', icon='🍎'), mini('Option two', '', 'short meta line', '$6', icon='🥣'), mini('Option three', '', 'short meta line', '$5', icon='🫛')])
     body += section('g2', 2, 'Cards & compact layouts', '<h3>points(): use instead of one-sentence boxes</h3>' + pts + '<h3>minis(): dense picture tiles</h3>' + mn + '<h3>masonry() of icards: varied heights, no dead space</h3>' + masonry(cards) + mrow('Media row', '', 'For lists where the picture helps identify the thing.', '$2.49', 'per pack', tags=[('core', 'good')]))
     ch = columns(['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'], [('Visits', [150, 162, 140, 170, 158, 120, 130])], 'Visits per day', 'thousands', target=160, target_label='target 160k')
@@ -404,7 +421,7 @@ def gallery(out):
     body += section('g3', 3, 'Charts', ch, 'Apache ECharts: hover tooltips, click legends to toggle, animated on scroll, re-rendered after live-share saves and theme changes.')
     st = timeline([('Week 1–2', 'Start', 'Set up and learn.'), ('Week 3–8', 'Build', 'Add one thing at a time.', 'var(--s3)'), ('Week 9+', 'Review', 'Measure and adjust.', 'var(--s2)')])
     st += compare([dict(title='Option A', tag='pick', pick=True, pros=['Cheap', 'Fast'], cons=['Plain']), dict(title='Option B', pros=['Tasty'], cons=['Pricey', 'Slow'])])
-    st += steps(['Do this first.', 'Then this.', 'Then this.']) + fold('Fold (accordion)', '<p>Hidden detail.</p>')
+    st += steps(['Do this first.', 'Then this.', 'Then this.'], check=True) + note('<p>note(): any prose goes on a card like this, never straight on the page.</p>') + fold('Fold (accordion)', '<p>Hidden detail.</p>')
     st += tabs('demo', [('Day A', '<p>Panel A</p>'), ('Day B', '<p>Panel B</p>')])
     st += week(['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'], [('Plan', [('Task A', 1), ('', 0), ('Task B', 1), ('', 0), ('Task A', 1), ('Extra', 3), ('Rest', 0)])])
     st += pull('A pull quote for the single sentence that should stick.') + kv([('Key', 'Value'), ('Another', 'Value')])

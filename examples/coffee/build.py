@@ -48,10 +48,10 @@ s1 = stats([
     dict(label='Caffeine in a brewed mug', value='96', unit='mg', delta='a quarter of the 400 mg day', color='var(--s7)'),
 ])
 s1 += points([
-    ('⚖️', 'Weigh, don’t scoop', 'Start at 1 g of coffee to 16 g of water. A $20 scale beats a $200 upgrade.'),
-    ('⚙️', 'The grinder matters most', 'Fresh, even grounds do more for flavour than any brewer. Put the money there first.'),
-    ('⏱️', 'Grind controls taste', 'Sour or thin means grind finer. Bitter or harsh means grind coarser. Change one thing at a time.'),
-    ('💸', 'Cheap kit pays back fast', 'An AeroPress setup replaces a café filter coffee in about 6 weeks.'),
+    ('⚖️', 'Weigh, don’t scoop', 'Start at 1 g of coffee to 16 g of water. A $20 scale beats a $200 upgrade.', None, '#dial'),
+    ('⚙️', 'The grinder matters most', 'Fresh, even grounds do more for flavour than any brewer. Put the money there first.', None, '#kit'),
+    ('⏱️', 'Grind controls taste', 'Sour or thin means grind finer. Bitter or harsh means grind coarser. Change one thing at a time.', None, '#dial'),
+    ('💸', 'Cheap kit pays back fast', 'An AeroPress setup replaces a café filter coffee in about 6 weeks.', None, '#cost'),
 ])
 body += section('short', 1, 'The short version', s1, 'Four numbers and four habits carry most of the result. The rest of the page is detail you can dip into.')
 
@@ -69,7 +69,7 @@ for k, name, dose, water, grind, mins, kit, effort, temp in METHODS:
         'espresso': 'The base for milk drinks. Most expensive and least forgiving, but nothing else makes a latte.',
         'coldbrew': 'Smooth and low in acidity. Steep overnight, dilute the concentrate 1:1 to serve.',
     }[k]
-    cards.append(icard(name, P(k), meta, blurb, tags, f'${kit}', 'starter kit', fit='cover', pad=0, ar='4/3'))
+    cards.append(icard(name, P(k), meta, blurb, tags, f'${kit}', 'starter kit', fit='cover', pad=0, ar='4/3', id=f'm-{k}'))
 m = grid(cards, cols=3)  # 6 cards → 3 + 3 on desktop, 2 + 2 + 2 on tablet, 1 per row on phones
 rows = [[name, f'1:{water / dose:.0f}', grind, temp, (f'{mins // 60} h' if mins >= 60 else f'{mins} min'), f'${cup[k]:.2f}']
         for k, name, dose, water, grind, mins, kit, effort, temp in METHODS]
@@ -135,8 +135,8 @@ st = steps(['<b>Weigh</b> 18 g of coffee and grind it medium-fine, like table sa
             '<b>Rinse</b> the paper filter with hot water and tip the water away.',
             '<b>Bloom:</b> pour 40 g of water at about 93 °C, wait 30–45 seconds.',
             '<b>Pour</b> slowly in circles to 288 g total by about 2:00.',
-            '<b>Drain</b> by 3:30–4:00. Taste, then change only the grind next time.'])
-body += section('dial', 5, 'Dial it in', ratio + split(fix, '<h3>A pour-over in five steps</h3>' + st) +
+            '<b>Drain</b> by 3:30–4:00. Taste, then change only the grind next time.'], check=True)
+body += section('dial', 5, 'Dial it in', ratio + split(fix, '<h3>A pour-over in five steps <span class="tag">tap to tick off</span></h3>' + st) +
                 fold('Why 93 °C?', '<p>The Specialty Coffee Association’s Golden Cup guidance aims for brew water around 93 °C, with 90–96 °C as the acceptable band. Cooler water under-extracts; boiling water pulls out more bitter compounds. Lighter roasts like the hot end; dark roasts and AeroPress do well cooler.</p>'),
                 'Most bad cups come down to one of three things: grind size, ratio, or water temperature.')
 
@@ -145,9 +145,9 @@ kit = donut([('Burr grinder', 60), ('Kettle (gooseneck)', 40), ('Dripper + filte
             'Where a $150 pour-over kit goes', 'US dollars', '$150', 'starter kit', '$', height=380)
 kit_r = figure(P('grinder', 1200), 'A burr grinder gives even particles. It is the single biggest upgrade over pre-ground coffee.', 'Burr coffee grinder', ar='4/3')
 body += section('kit', 6, 'Starter kit, in priority order', split(kit, kit_r) +
-                compare([dict(title='Start here', tag='best value', pick=True, body='AeroPress + hand burr grinder + scale', pros=['About $110', 'Hard to get wrong', 'Travels well'], cons=['One cup at a time']),
-                         dict(title='Weekend ritual', tag='pour-over', body='Dripper, gooseneck kettle, grinder, scale', pros=['Brightest flavour', 'Brews 1–3 cups'], cons=['Needs practice', 'About $150']),
-                         dict(title='Milk drinks', tag='espresso', body='Machine with steam wand + espresso grinder', pros=['Lattes and flat whites', 'Pays back in about 5 months'], cons=['$650 and up', 'Steepest learning curve'])]),
+                compare([dict(title='Start here', tag='best value', pick=True, body='AeroPress + hand burr grinder + scale', pros=['About $110', 'Hard to get wrong', 'Travels well'], cons=['One cup at a time'], href='#m-aeropress'),
+                         dict(title='Weekend ritual', tag='pour-over', body='Dripper, gooseneck kettle, grinder, scale', pros=['Brightest flavour', 'Brews 1–3 cups'], cons=['Needs practice', 'About $150'], href='#m-drip'),
+                         dict(title='Milk drinks', tag='espresso', body='Machine with steam wand + espresso grinder', pros=['Lattes and flat whites', 'Pays back in about 5 months'], cons=['$650 and up', 'Steepest learning curve'], href='#m-espresso')]),
                 'Spend on the grinder first, then a scale. The brewer is the cheapest part.')
 
 credits = ', '.join(f'{v["by"].lstrip("/")}' for v in CREDITS.values())

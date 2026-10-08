@@ -17,11 +17,23 @@ The theme and primitives are guidelines, not a cage. Invent a new visual form wh
 
 Density is good, as long as it stays legible. Don't put one sentence in a big box: use `points`, `minis` or a plain list.
 
+## Two hard layout rules
+
+**1. No bare text on the page.** Every piece of body text sits on a surface: a card, callout or alert, note, table, chart, stat tile or figure. The only text allowed straight on the page background is headings (h1–h4), the section lede under an h2, the hero, and the nav.
+- Prose goes in `note('<p>…</p>')`. A warning or recommendation goes in `callout(..., kind='warn'|'good'|'bad')`. Facts go in `kv()` (already a card).
+- `points`, `steps`, `timeline`, `kv`, `pull`, `meter`, `week`, `figure` and the footer all render as surfaces now.
+- A raw `<p>`/`<ul>` dropped into a section still gets a surface automatically, but use `note()` on purpose.
+
+**2. Bullets that do something are clickable as a whole item.** If a bullet points somewhere, the entire item is the link, with hover and an arrow, never a small text link inside it.
+- A point, timeline entry, compare column, card or mini that refers to a section, a card or a page → pass `href=` (`'#section-id'` stays in the page; external URLs open a new tab). Give targets an id (`icard(..., id='m-x')`).
+- How-to steps the reader will follow → `steps(items, check=True)`: each row is clickable and ticks off.
+- Nothing may *look* clickable (pointer cursor, hover lift, arrow) without doing something.
+
 ## Files
 
 | File | Use |
 |---|---|
-| `docprims.py` | Builders that each return an HTML string. Structure: `hero`, `toc`, `section`, `split`, `grid`, `card`, `masonry`, `fold`, `tabs`. Content: `stats`, `points`, `callout`, `icard`, `mini`/`minis`, `mrow`, `table`, `steps`, `timeline`, `compare`, `week`, `figure`, `pull`, `kv`, `tag`. Charts: `columns`, `line`, `donut`, `rings`, `hbars`, `meter`, `echart` (raw ECharts escape hatch). Images: `img_uri`, `svg_uri`. Output: `page`. |
+| `docprims.py` | Builders that each return an HTML string. Structure: `hero`, `toc`, `section`, `split`, `grid`, `card`, `masonry`, `fold`, `tabs`. Content: `stats`, `points` (href), `note`, `callout`, `icard`, `mini`/`minis`, `mrow`, `table`, `steps` (check), `timeline` (href), `compare` (href), `week`, `figure`, `pull`, `kv`, `tag`. Charts: `columns`, `line`, `donut`, `rings`, `hbars`, `meter`, `echart` (raw ECharts escape hatch). Images: `img_uri`, `svg_uri`. Output: `page`. |
 | `template.html` | Design tokens (light + dark), the CSS for every primitive, CSS-only motion, print CSS, the toolbar (edit/theme/pdf), the auto section rail, and the ECharts renderer. |
 | `python3 docprims.py --gallery out.html` | Renders every primitive. Open it before designing a doc. |
 | `scripts/verify.mjs` | The self-verifier (see Verify). Needs Playwright: `npm i -D playwright && npx playwright install chromium`. |
@@ -98,6 +110,8 @@ It exits non-zero on any **FAIL**. What it checks:
 | chrome | hero or nav not full-bleed; toolbar over hero text or over the sticky nav once scrolled; section rail over content; toc jump hiding the heading under the sticky nav |
 | media | broken images, missing alt — WARN on stretched, tiny, or > 72%-of-screen images |
 | balance | WARN when side-by-side columns end at very different heights, or a grid's last row is ≤ half full |
+| surfaces | **bare text on the page**: any body text not on a card, callout, table, chart or other surface |
+| clicks | something looks clickable (pointer cursor) but isn't · **only part of a bullet is a link** (make the whole item the link) · `#anchor` links that go nowhere — WARN on click targets under 24 px |
 | other | page/console errors — WARN on low contrast (< 3:1) and skipped heading levels |
 
 Then **open the screenshots and look**: `*-top.png`, the `*-pNN.png` page slices at 1512 and 390, and `hover-*.png` (one per chart). The checks catch geometry, not taste. Look for:
@@ -114,6 +128,8 @@ Common fixes:
 - Unbalanced split → move the long block (callout, kv list) below the split, crop the photo with `figure(..., ar='4/3')`, or raise the chart's `height`.
 - Orphaned last row → `grid(items, cols=N)` with N dividing the count, or change the count.
 - Touching blocks → you added raw HTML outside a flow container. Wrap it in `<div class="flow">`.
+- Bare text → wrap it in `note()`, or turn it into a `callout`, `kv` or `points`.
+- Partly clickable bullet → remove the inline `<a>` and pass `href=` to the primitive instead.
 
 ## Interactivity
 
