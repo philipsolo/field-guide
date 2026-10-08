@@ -130,6 +130,31 @@ for (const theme of ['light', 'dark']) for (const w of widths) {
       for (const x of texts) if (x.r.left < vr.left - 1 || x.r.right > vr.right + 1 || x.r.top < vr.top - 1 || x.r.bottom > vr.bottom + 1) { out.fail.push(`${id}: label cut off at chart edge 「${x.t.textContent.slice(0, 30)}」`); break; }
     });
     out.nViz = vizzes.length;
+    // hand-drawn diagrams (inline SVG outside ECharts): text must not collide, cross a line, straddle a box edge, or leave the canvas
+    const segHits = (x1, y1, x2, y2, r) => { // Liang–Barsky: does segment touch rect r?
+      let t0 = 0, t1 = 1; const dx = x2 - x1, dy = y2 - y1;
+      for (const [p, q] of [[-dx, x1 - r.left], [dx, r.right - x1], [-dy, y1 - r.top], [dy, r.bottom - y1]]) {
+        if (p === 0) { if (q < 0) return false; } else { const u = q / p; if (p < 0) { if (u > t1) return false; if (u > t0) t0 = u; } else { if (u < t0) return false; if (u < t1) t1 = u; } } }
+      return true; };
+    [...main.querySelectorAll('svg')].filter(s => vis(s) && !s.closest('.viz') && s.querySelector('text')).forEach((svg, si) => {
+      const id = `diagram #${si + 1} ${name(svg.closest('figure,.card') || svg).slice(0, 50)}`; const sr = svg.getBoundingClientRect(); let n = 0;
+      const texts = [...svg.querySelectorAll('text')].filter(x => x.textContent.trim()).map(x => { const r = x.getBoundingClientRect(); return { x, r: { left: r.left + 1, right: r.right - 1, top: r.top + 2, bottom: r.bottom - 2 } }; });
+      const ctm = svg.getScreenCTM(); const pt = (x, y) => { const q = svg.createSVGPoint(); q.x = x; q.y = y; return q.matrixTransform(ctm); };
+      for (let a = 0; a < texts.length; a++) {
+        const A = texts[a];
+        if (A.r.left < sr.left - 1 || A.r.right > sr.right + 1 || A.r.top < sr.top - 1 || A.r.bottom > sr.bottom + 1) { if (n++ < 3) out.fail.push(`${id}: text runs off the diagram 「${A.x.textContent.slice(0, 30)}」`); }
+        for (let b = a + 1; b < texts.length; b++) if (inter(A.r, texts[b].r, 1) && n++ < 3) out.fail.push(`${id}: text collides 「${A.x.textContent.slice(0, 24)}」 × 「${texts[b].x.textContent.slice(0, 24)}」`);
+        for (const l of svg.querySelectorAll('line,polyline,path')) { if (l.closest('marker,defs')) continue;
+          let pts = []; if (l.tagName === 'line') pts = [[+l.getAttribute('x1'), +l.getAttribute('y1')], [+l.getAttribute('x2'), +l.getAttribute('y2')]];
+          else if (l.tagName === 'polyline') pts = (l.getAttribute('points') || '').trim().split(/[\s,]+/).map(Number).reduce((acc, v, i, arr) => (i % 2 ? acc : [...acc, [v, arr[i + 1]]]), []);
+          else continue;
+          const sp = pts.map(([x, y]) => pt(x, y));
+          for (let k = 1; k < sp.length; k++) if (segHits(sp[k - 1].x, sp[k - 1].y, sp[k].x, sp[k].y, A.r)) { if (n++ < 3) out.fail.push(`${id}: a line runs through the text 「${A.x.textContent.slice(0, 30)}」`); break; } }
+        for (const rc of svg.querySelectorAll('rect')) { const r = rc.getBoundingClientRect(); if (r.width >= sr.width - 2 && r.height >= sr.height - 2) continue;
+          const overlaps = inter(r, A.r, 0), inside = A.r.left >= r.left && A.r.right <= r.right && A.r.top >= r.top && A.r.bottom <= r.bottom;
+          if (overlaps && !inside && n++ < 3) out.fail.push(`${id}: text straddles a box edge 「${A.x.textContent.slice(0, 30)}」`); }
+      }
+    });
 
     // chrome: toolbar over hero text (at scroll 0), rail over content
     const tb = document.querySelector('.toolbar');
