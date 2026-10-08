@@ -19,7 +19,7 @@ These are guidelines, not a cage. Write raw HTML/SVG with the same tokens (var(-
 .card, .chart) whenever a message needs a form this file doesn't have.
 """
 from __future__ import annotations
-import base64, hashlib, html, math, os, subprocess, sys, tempfile
+import base64, hashlib, html, math, os, re, subprocess, sys, tempfile
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 SERIES = [f'var(--s{i})' for i in range(1, 9)]  # fixed order — never cycle past 8
@@ -122,14 +122,22 @@ def grid(items, min_px=260, cols=None) -> str:
     if cols:
         return f'<div class="grid fixed" style="--cols:{cols}">{"".join(items)}</div>'
     return f'<div class="grid" style="--min:{min_px}px">{"".join(items)}</div>'
-def card(body, cls='') -> str: return f'<div class="card rv {cls}">{body}</div>'
+def card(body, cls='') -> str: return f'<div class="card rv {cls}"{_aid(body)}>{body}</div>'
+def _aid(text, prefix='') -> str:
+    """Stable element id from visible text, so annotations (e.g. Margin notes) find the element after a rebuild."""
+    s = re.sub(r'<[^>]+>', ' ', str(text or ''))
+    s = re.sub(r'&[a-z#0-9]+;', ' ', s.lower())
+    s = re.sub(r'[^a-z0-9]+', '-', s).strip('-')
+    s = '-'.join(s.split('-')[:8])[:56].strip('-')
+    return f' data-aid="{prefix}{s}"' if s else ''
+
 def _link(href):
     """Attributes for a whole-item link: in-page anchors stay in the tab, external links open a new one."""
     return f'href="{esc(href)}"' + ('' if href.startswith('#') else ' target="_blank" rel="noopener"')
 
 def note(body, title='') -> str:
     """Prose on a card. Use for any paragraph/list that isn't a callout — text never sits bare on the page."""
-    return f'<div class="note rv">{f"<h4>{title}</h4>" if title else ""}{body}</div>'
+    return f'<div class="note rv"{_aid(title or body)}>{f"<h4>{title}</h4>" if title else ""}{body}</div>'
 
 def tag(text, kind='') -> str: return f'<span class="tag {kind}">{text}</span>'
 def dot(color) -> str: return f'<span class="dot" style="--c:{color}" aria-hidden="true"></span>'
@@ -138,7 +146,7 @@ def callout(body, title='', kind='note', icon=None) -> str:
     """kind: note | good | warn | bad. Always has a text title/icon, never colour alone."""
     ic = icon or {'note': 'i', 'good': '✓', 'warn': '!', 'bad': '✕'}[kind]
     t = f'<div class="ct">{title}</div>' if title else ''
-    return f'<div class="callout {kind if kind != "note" else ""} rv"><span class="ic" aria-hidden="true">{ic}</span><div>{t}{body}</div></div>'
+    return f'<div class="callout {kind if kind != "note" else ""} rv"{_aid(title or body)}><span class="ic" aria-hidden="true">{ic}</span><div>{t}{body}</div></div>'
 
 def stats(items) -> str:
     """items: dicts {label, value, unit?, delta?, dir?('up'|'down'), color?}"""
@@ -147,7 +155,7 @@ def stats(items) -> str:
         c = f' style="--c:{s["color"]}"' if s.get('color') else ''
         u = f'<small>{s["unit"]}</small>' if s.get('unit') else ''
         d = f'<div class="d {s.get("dir", "")}">{s["delta"]}</div>' if s.get('delta') else ''
-        out.append(f'<div class="stat rv"{c}><div class="l">{s["label"]}</div><div class="v">{s["value"]}{u}</div>{d}</div>')
+        out.append(f'<div class="stat rv"{c}{_aid(s["label"])}><div class="l">{s["label"]}</div><div class="v">{s["value"]}{u}</div>{d}</div>')
     n = len(items); cols = n if n <= 4 else (3 if n % 3 == 0 else 4)  # rows always fill: 4 → 4 (2×2 on tablets), 6 → 3+3
     return f'<div class="stats" style="--n:{cols}">{"".join(out)}</div>'
 
@@ -161,23 +169,23 @@ def icard(title, img='', meta='', body='', tags=(), price='', price_sub='', href
              f'{f"<div class=m>{meta}</div>" if meta else ""}{f"<div class=small>{body}</div>" if body else ""}'
              f'<div class="foot">{pr}</div></div>')
     if href:
-        return f'<a class="icard rv"{f" id={id}" if id else ""} {_link(href)}>{inner}</a>'
-    return f'<div class="icard rv"{f" id={id}" if id else ""}>{inner}</div>'
+        return f'<a class="icard rv"{f" id={id}" if id else ""}{_aid(title)} {_link(href)}>{inner}</a>'
+    return f'<div class="icard rv"{f" id={id}" if id else ""}{_aid(title)}>{inner}</div>'
 
 def mrow(title, img='', meta='', aside='', aside_sub='', href='', tags=()) -> str:
     th = f'<img class="th" src="{img}" alt="{esc(title)}" width="96" height="96">' if img else '<span></span>'
     tg = ' ' + ' '.join(tag(t, k) for t, k in tags) if tags else ''
     a = f'<div class="aside">{aside}<small>{aside_sub}</small></div>' if aside else '<span></span>'
     inner = f'{th}<div><div class="t">{title}{tg}</div><div class="m">{meta}</div></div>{a}'
-    return (f'<a class="mrow rv" href="{esc(href)}" target="_blank" rel="noopener">{inner}</a>' if href
-            else f'<div class="mrow rv">{inner}</div>')
+    return (f'<a class="mrow rv"{_aid(title)} href="{esc(href)}" target="_blank" rel="noopener">{inner}</a>' if href
+            else f'<div class="mrow rv"{_aid(title)}>{inner}</div>')
 
 def table(headers, rows, num=(), best=None) -> str:
     """rows: list of lists (raw HTML cells). num: column indexes right-aligned.
     best: set of (row, col) cells to highlight as the winner."""
     best = best or set()
     th = ''.join(f'<th scope="col"{" class=num" if i in num else ""}>{h}</th>' for i, h in enumerate(headers))
-    body = ''.join('<tr>' + ''.join(
+    body = ''.join(f'<tr{_aid(r[0] if r else "")}>' + ''.join(
         f'<td class="{"num " if j in num else ""}{"best" if (i, j) in best else ""}">{c}</td>' for j, c in enumerate(r)) + '</tr>'
         for i, r in enumerate(rows))
     return f'<div class="tablewrap rv"><table><thead><tr>{th}</tr></thead><tbody>{body}</tbody></table></div>'
@@ -185,10 +193,10 @@ def table(headers, rows, num=(), best=None) -> str:
 def steps(items, check=False, name='st') -> str:
     """Numbered how-to. check=True makes each step a clickable row the reader can tick off (CSS-only)."""
     if check:
-        return '<ol class="steps check">' + ''.join(f'<li><label><input type="checkbox" name="{name}{i}" aria-label="Done: step {i + 1}">{s}</label></li>' for i, s in enumerate(items)) + '</ol>'
-    return '<ol class="steps">' + ''.join(f'<li>{s}</li>' for s in items) + '</ol>'
+        return '<ol class="steps check">' + ''.join(f'<li{_aid(s, "step-")}><label><input type="checkbox" name="{name}{i}" aria-label="Done: step {i + 1}">{s}</label></li>' for i, s in enumerate(items)) + '</ol>'
+    return '<ol class="steps">' + ''.join(f'<li{_aid(s, "step-")}>{s}</li>' for s in items) + '</ol>'
 def fold(summary, body, open=False) -> str:
-    return f'<details class="fold"{" open" if open else ""}><summary>{summary}</summary><div>{body}</div></details>'
+    return f'<details class="fold"{" open" if open else ""}{_aid(summary)}><summary>{summary}</summary><div>{body}</div></details>'
 def figure(img, caption='', alt='', ar='') -> str:
     """Big picture. ar='3/2' crops it (object-fit: cover) so a tall photo can't dwarf what sits beside it."""
     st = f' style="aspect-ratio:{ar};object-fit:cover"' if ar else ''
@@ -211,7 +219,7 @@ def timeline(items) -> str:
     for it in items:
         when, what, body = it[:3]; c = it[3] if len(it) > 3 and it[3] else 'var(--accent)'; href = it[4] if len(it) > 4 else ''
         inner = f'<div class="when">{when}</div><div class="what">{what}</div><p>{body}</p>'
-        out.append(f'<a class="tl go rv" style="--c:{c}" {_link(href)}>{inner}</a>' if href else f'<div class="tl rv" style="--c:{c}">{inner}</div>')
+        out.append(f'<a class="tl go rv"{_aid(what)} style="--c:{c}" {_link(href)}>{inner}</a>' if href else f'<div class="tl rv"{_aid(what)} style="--c:{c}">{inner}</div>')
     return f'<div class="timeline">{"".join(out)}</div>'
 
 def compare(cols) -> str:
@@ -222,7 +230,7 @@ def compare(cols) -> str:
         tg = tag(c['tag'], 'accent' if c.get('pick') else '') if c.get('tag') else ''
         cls = f'col rv{" pick" if c.get("pick") else ""}'
         inner = f'<h4><span>{c["title"]}{"<span class=go></span>" if c.get("href") else ""}</span>{tg}</h4>{"<p class=small>" + c["body"] + "</p>" if c.get("body") else ""}<ul>{li}</ul>'
-        out.append(f'<a class="{cls}" {_link(c["href"])}>{inner}</a>' if c.get('href') else f'<div class="{cls}">{inner}</div>')
+        out.append(f'<a class="{cls}"{_aid(c["title"])} {_link(c["href"])}>{inner}</a>' if c.get('href') else f'<div class="{cls}"{_aid(c["title"])}>{inner}</div>')
     n = len(cols); k = n if n <= 4 else (3 if n % 3 == 0 or n == 5 else 4)  # rows fill: 5 → 3+2, 6 → 3+3
     return f'<div class="compare" style="--n:{k}">{"".join(out)}</div>'
 
@@ -241,14 +249,14 @@ def points(items, min_px=250) -> str:
     for it in items:
         ic, lead, text = it[:3]; bg = f' style="--c:{it[3]}"' if len(it) > 3 and it[3] else ''; href = it[4] if len(it) > 4 else ''
         inner = f'<span class="pi"{bg} aria-hidden="true">{ic}</span><div><b>{lead}</b><p>{text}</p></div>'
-        out.append(f'<a class="point rv" {_link(href)}>{inner}</a>' if href else f'<div class="point rv">{inner}</div>')
+        out.append(f'<a class="point rv"{_aid(lead)} {_link(href)}>{inner}</a>' if href else f'<div class="point rv"{_aid(lead)}>{inner}</div>')
     return f'<div class="points" style="grid-template-columns:repeat(auto-fit,minmax({min_px}px,1fr))">{"".join(out)}</div>'
 
 def mini(title, img='', meta='', aside='', href='', icon='') -> str:
     """Dense horizontal tile: 64px picture, title, one meta line, value on the right."""
     im = f'<img src="{img}" alt="{esc(title)}" width="64" height="64">' if img else f'<span class="ph" aria-hidden="true">{icon or "•"}</span>'
     inner = f'{im}<div><div class="t">{title}</div><div class="m">{meta}</div></div><div class="a">{aside}</div>'
-    return (f'<a class="mini rv" href="{esc(href)}" target="_blank" rel="noopener">{inner}</a>' if href else f'<div class="mini rv">{inner}</div>')
+    return (f'<a class="mini rv"{_aid(title)} href="{esc(href)}" target="_blank" rel="noopener">{inner}</a>' if href else f'<div class="mini rv"{_aid(title)}>{inner}</div>')
 
 def minis(items, min_px=250) -> str: return f'<div class="minis" style="--min:{min_px}px">{"".join(items)}</div>'
 def masonry(items, min_px=290, cols=3) -> str:
@@ -282,7 +290,7 @@ def legend(items) -> str:
     return '<div class="legend">' + ''.join(f'<span><i style="--c:{c}"></i>{esc(n)}</span>' for n, c in items) + '</div>'
 
 def chart(title, inner, sub='', leg='', note='') -> str:
-    return (f'<figure class="chart rv"><div class="ch"><h4>{title}</h4><span class="sub">{sub}</span></div>{inner}{leg}'
+    return (f'<figure class="chart rv"{_aid(title)}><div class="ch"><h4>{title}</h4><span class="sub">{sub}</span></div>{inner}{leg}'
             f'{f"<p class=small style=margin-top:6px>{note}</p>" if note else ""}</figure>')
 
 def _target(target, label):
