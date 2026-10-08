@@ -223,7 +223,8 @@ def compare(cols) -> str:
         cls = f'col rv{" pick" if c.get("pick") else ""}'
         inner = f'<h4><span>{c["title"]}{"<span class=go></span>" if c.get("href") else ""}</span>{tg}</h4>{"<p class=small>" + c["body"] + "</p>" if c.get("body") else ""}<ul>{li}</ul>'
         out.append(f'<a class="{cls}" {_link(c["href"])}>{inner}</a>' if c.get('href') else f'<div class="{cls}">{inner}</div>')
-    return f'<div class="compare">{"".join(out)}</div>'
+    n = len(cols); k = n if n <= 4 else (3 if n % 3 == 0 or n == 5 else 4)  # rows fill: 5 → 3+2, 6 → 3+3
+    return f'<div class="compare" style="--n:{k}">{"".join(out)}</div>'
 
 def week(cols, rows) -> str:
     """Planner grid. rows: (label, [(text, kind 1..5 or 0)])."""

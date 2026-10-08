@@ -262,7 +262,9 @@ td.best{background:var(--good-wash);color:var(--good-ink);font-weight:600}
 .steps li::before{content:counter(s);position:absolute;left:0;top:0;width:30px;height:30px;border-radius:50%;background:var(--accent-wash);color:var(--accent-ink);font:600 13px var(--sans);display:grid;place-items:center}
 
 /* compare columns */
-.compare{display:grid;gap:14px;margin:16px 0;grid-template-columns:repeat(auto-fit,minmax(230px,1fr))}
+.compare{display:grid;gap:14px;margin:16px 0;grid-template-columns:repeat(var(--n,3),minmax(0,1fr))}
+@media (max-width:1000px){.compare{grid-template-columns:repeat(min(var(--n,3),2),minmax(0,1fr))}}
+@media (max-width:600px){.compare{grid-template-columns:1fr}}
 .compare .col{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:18px;box-shadow:var(--shadow)}
 .compare .col.pick{border:2px solid var(--accent)}
 .compare a.col{display:block}
@@ -465,7 +467,11 @@ window.__theme=function(t){var h=document.documentElement;t=t||(h.dataset.theme=
     if(ya&&ya.type==='category'&&ya.axisLabel&&ya.axisLabel.width){ya.axisLabel.width=Math.round(W*.34);ya.axisLabel.fontSize=11.5;
       (opt.series||[]).forEach(function(se){(se.data||[]).forEach(function(d){if(d&&d.label&&typeof d.label.formatter==='string')d.label.formatter=d.label.formatter.replace(/\s*\{n\|[^}]*\}/,'')})});
       if(opt.grid&&!Array.isArray(opt.grid))opt.grid.right=Math.max(64,spec.rv||0); ya.axisLabel.hideOverlap=false; ya.axisLabel.interval=0; spec.h=Math.max(spec.h||0,(ya.data||[]).length*46+16);} }
-  var ns=(opt.series||[]).length; if(el.clientWidth<560&&opt.legend&&opt.legend.show!==false&&ns>1&&opt.grid&&!Array.isArray(opt.grid)){opt.grid.bottom=(opt.grid.bottom||8)+Math.ceil(ns/2)*20;spec.h=(spec.h||280)+Math.ceil(ns/2)*14}
+  var ns=(opt.series||[]).length;
+  // a legend that wraps onto extra rows needs extra room, or it lands on the x-axis labels (any width, not just phones)
+  if(opt.legend&&opt.legend.show!==false&&ns>1&&opt.grid&&!Array.isArray(opt.grid)){var LW=(el.clientWidth||600)-24,rows=1,x=0;
+    (opt.series||[]).forEach(function(s){var w=String(s.name||'').length*7.4+42;if(x+w>LW&&x>0){rows++;x=w}else x+=w});
+    if(rows>1){opt.grid.bottom=(opt.grid.bottom||8)+(rows-1)*24;spec.h=(spec.h||280)+(rows-1)*24}}
   var ss=opt.series||[]; if(ss.length>2&&ss.every(function(s){return s.type==='gauge'})&&(el.clientWidth||600)/ss.length<150){
     var cols=2,rows=Math.ceil(ss.length/cols),rh=spec.h||190; spec.h=rh*rows;
     ss.forEach(function(s,i){var c=i%cols,r=Math.floor(i/cols);s.center=[((c+.5)/cols*100)+'%',(((r+.46)/rows)*100)+'%'];s.radius=Math.round(Math.min(el.clientWidth/cols,rh)*.31)+'px'})}
