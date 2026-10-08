@@ -52,6 +52,7 @@ Density is good, as long as it stays legible. Don't put one sentence in a big bo
    page('Title', body, out='my-doc.html', kind='research', description='one line', footer='Sources: …')
    ```
    Keep every assumption (prices, rates, dates) as a named constant at the top of the script, and state it in the doc.
+   Pass **`sources=[(label, url, why)]`** (everything you researched) and **`summary=`** (what's done, what's pending) to `page()`. It appends a **Sources** section listing them, plus every other link on the page grouped by site and the rebuild command, with a JSON copy (`#doc-sources`) so a later session can pick the work up.
 3. **Pick visual forms by the data's job:**
    - One headline number → `stats`. Use 2, 3, 4 or 6 tiles so the rows fill.
    - A ranking, or costs side by side → `hbars`.

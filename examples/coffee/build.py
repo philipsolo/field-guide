@@ -155,5 +155,9 @@ footer = ('Sources: Mayo Clinic, “Caffeine content for coffee, tea, soda and m
           'Specialty Coffee Association Golden Cup guidance (≈55 g/L, 90–96 °C). Prices are illustrative round numbers. '
           f'Photos: Unsplash (free licence) by {credits}. Built with the field-guide skill.')
 page('Brewing coffee at home', body, os.path.join(EX, 'coffee-at-home.html'), footer=footer, kind='research',
+     sources=[('Mayo Clinic: caffeine content', 'https://www.mayoclinic.org/healthy-lifestyle/nutrition-and-healthy-eating/in-depth/caffeine/art-20049372', 'caffeine per serving'),
+              ('US FDA: spilling the beans on caffeine', 'https://www.fda.gov/consumers/consumer-updates/spilling-beans-how-much-caffeine-too-much', '400 mg/day guidance'),
+              ('Specialty Coffee Association', 'https://sca.coffee/research/protocols-best-practices', 'Golden Cup brew ratio and temperature')],
+     summary='Worked example for the field-guide skill. Prices are illustrative round numbers (constants at the top of build.py).',
      description='A worked example of the field-guide skill: home coffee methods, costs, caffeine and brewing tips.')
 print('wrote', os.path.join(EX, 'coffee-at-home.html'))

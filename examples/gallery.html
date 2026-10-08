@@ -360,6 +360,12 @@ a.mini:hover{border-color:var(--line-2);box-shadow:var(--shadow-lift)}
 .tl.has-cal::before{top:11px}
 .tl.has-cal>.addcal{margin-bottom:6px}
 @media print{.addcal{display:none}}
+.ho-card h3{margin:0 0 8px}
+.ho-list{list-style:none;padding:0;margin:0;columns:2 380px;column-gap:24px}
+.ho-list li{margin:0 0 2px;max-width:none;break-inside:avoid}
+.ho-list a.row{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 8px}
+.ho-list small{color:var(--muted);font:12px var(--mono)}
+.handoff code{font-size:12px;overflow-wrap:anywhere}
 /* round calendar button for dense rows */
 .addcal.ico{width:32px;height:32px;min-height:0;padding:0;justify-content:center;border-radius:50%;flex:none}
 .addcal.ico::before{content:"";width:16px;height:16px;background:currentColor;color:var(--accent-ink);

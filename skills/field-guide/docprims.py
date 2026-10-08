@@ -80,13 +80,49 @@ def favicon(icon='✦', color='#2a78d6') -> str:
     from urllib.parse import quote
     return 'data:image/svg+xml,' + quote(svg)
 
+def sources_block(body: str, sources=(), summary='') -> str:
+    """Sources (and an optional handoff note) at the bottom of the page: curated sources, every other external
+    link on the page grouped by site, and how to rebuild. Machine-readable copy in <script id="doc-sources">."""
+    from urllib.parse import urlparse
+    import __main__
+    cur = [(s[0], s[1], s[2] if len(s) > 2 else '') for s in sources]
+    seen = {u for _, u, _ in cur}
+    links = []
+    for m in re.finditer(r'(?:href|data-url|data-href)="(https?://[^"]+)"', body):
+        u = html.unescape(m.group(1)).split('#:~:')[0]
+        if u not in seen and not u.startswith('data:'):
+            seen.add(u); links.append(u)
+    sites = {}
+    for u in links:
+        sites.setdefault(urlparse(u).netloc.removeprefix('www.'), []).append(u)
+    gen = os.path.relpath(__main__.__file__) if getattr(__main__, '__file__', None) else ''
+    cur_html = ''.join(f'<li><a class="row" {_link(u)}><b>{esc(l)}</b>{f" — {esc(w)}" if w else ""}<small>{esc(urlparse(u).netloc.removeprefix("www."))}</small></a></li>' for l, u, w in cur)
+    site_html = ''.join(f'<li><a class="row" {_link(v[0])}><b>{esc(k)}</b><small>{len(v)} link{"s" if len(v) != 1 else ""}</small></a></li>'
+                        for k, v in sorted(sites.items(), key=lambda kv: -len(kv[1]))[:40])
+    parts = []
+    if cur_html:
+        parts.append(f'<div class="card ho-card"><h3>Sources</h3><ul class="ho-list">{cur_html}</ul></div>')
+    if site_html:
+        parts.append(f'<div class="card ho-card"><h3>Also linked from this page</h3><ul class="ho-list">{site_html}</ul></div>')
+    if summary or gen:
+        parts.append(note((f'<p><b>Status.</b> {esc(summary)}</p>' if summary else '') + (f'<p><b>Rebuild.</b> <code>python3 {esc(gen)}</code></p>' if gen else '')))
+    if not parts:
+        return ''
+    js = _json.dumps({'sources': [{'label': l, 'url': u, 'why': w} for l, u, w in cur], 'links': links[:1500],
+                      'summary': summary, 'generator': gen}, ensure_ascii=False).replace('</', '<\\/')
+    return (f'<section class="sec handoff" id="sources"><div class="sec-head rv"><span class="n">↺</span><h2>Sources</h2>'
+            f'<p class="lede">What this page was built from.</p></div><div class="flow">{"".join(parts)}</div>'
+            f'<script type="application/json" id="doc-sources">{js}</script></section>')
+
 def page(title: str, body: str, out: str | None = None, footer: str = '', kind: str = 'misc',
          icon: str | None = None, color: str | None = None, title_suffix: bool = True,
-         description: str = '', lang: str = 'en') -> str:
+         description: str = '', lang: str = 'en', sources=(), summary: str = '') -> str:
     """Wrap body in the template -> complete HTML document. kind picks favicon + '<title> · Kind'."""
     tpl = open(os.path.join(HERE, 'template.html')).read()
     k_icon, k_color, k_label = KINDS.get(kind, KINDS['misc'])
     full_title = f'{title} · {k_label}' if title_suffix else title
+    if sources or summary:
+        body = body + sources_block(body, sources, summary)
     foot = f'<div class="footer">{footer}</div>' if footer else ''
     doc = (tpl.replace('{{TITLE}}', esc(full_title)).replace('{{FAVICON}}', favicon(icon or k_icon, color or k_color))
               .replace('{{KIND}}', esc(kind)).replace('{{DESC}}', esc(description)).replace('{{LANG}}', esc(lang))
