@@ -18,7 +18,7 @@ Two house rules the skill enforces:
 This skill gives the model:
 
 1. **A design system.** Editorial type, a colour-blind-checked chart palette, real light and dark themes, CSS-only motion, print/PDF styles.
-2. **About 40 Python building blocks**, from `hero`, `stats`, `points`, `icard`, `compare` and `agenda` (dated events with add-to-calendar `.ics`) to interactive **Apache ECharts** charts (`line`, `columns`, `hbars`, `donut`, `rings`). Hover tooltips, legends and dark mode come for free.
+2. **About 40 Python building blocks**, from `hero`, `stats`, `points`, `icard`, `compare`, `agenda` (dated events with add-to-calendar `.ics`) and `calendar` (a paged week grid with per-group filters) to interactive **Apache ECharts** charts (`line`, `columns`, `hbars`, `donut`, `rings`). Hover tooltips, legends and dark mode come for free.
 3. **A self-verifier** (`verify.mjs`) that renders the page in headless Chromium at 5 widths × 2 themes and fails on what a human reviewer would notice. It saves screenshots so the model has to look at them too.
 
 The output is **one `.html` file** you can email, drop in a repo, host anywhere or print to PDF.

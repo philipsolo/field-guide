@@ -30,11 +30,16 @@ Density is good, as long as it stays legible. Don't put one sentence in a big bo
 - How-to steps the reader will follow → `steps(items, check=True)`: each row is clickable and ticks off.
 - Nothing may *look* clickable (pointer cursor, hover lift, arrow) without doing something.
 
+**3. Button and tag rows: the open item first, sizes never step up left to right.**
+- In any tab / chip / filter / pager row, the selected or current item (this week, today, the open page) is the leftmost button. Items that are over are hidden or moved after it.
+- Buttons in one row are the same size: a fixed width and one label pattern. Never a short or small pill to the left of a wider one; when sizes must differ, the big ones go first.
+- Small tags (counts, status) sit to the right of the title or button they belong to, never in front of it.
+
 ## Files
 
 | File | Use |
 |---|---|
-| `docprims.py` | Builders that each return an HTML string. Structure: `hero`, `toc`, `section`, `split`, `grid`, `card`, `masonry`, `fold`, `tabs`. Content: `stats`, `points` (href), `note`, `callout`, `agenda`, `addcal` (.ics),  `icard`, `mini`/`minis`, `mrow`, `table`, `steps` (check), `timeline` (href), `compare` (href), `week`, `figure`, `pull`, `kv`, `tag`. Charts: `columns`, `line`, `donut`, `rings`, `hbars`, `meter`, `echart` (raw ECharts escape hatch). Images: `img_uri`, `svg_uri`. Output: `page`. |
+| `docprims.py` | Builders that each return an HTML string. Structure: `hero`, `toc`, `section`, `split`, `grid`, `card`, `masonry`, `fold`, `tabs`. Content: `stats`, `points` (href), `note`, `callout`, `agenda`, `calendar` (paged weeks + per-group filters), `addcal` (.ics), `icard`, `mini`/`minis`, `mrow`, `table`, `steps` (check), `timeline` (href), `compare` (href), `week`, `figure`, `pull`, `kv`, `tag`. Charts: `columns`, `line`, `donut`, `rings`, `hbars`, `meter`, `echart` (raw ECharts escape hatch). Images: `img_uri`, `svg_uri`. Output: `page`. |
 | `template.html` | Design tokens (light + dark), the CSS for every primitive, CSS-only motion, print CSS, the toolbar (edit/theme/pdf), the auto section rail, and the ECharts renderer. |
 | `python3 docprims.py --gallery out.html` | Renders every primitive. Open it before designing a doc. |
 | `scripts/verify.mjs` | The self-verifier (see Verify). Needs Playwright: `npm i -D playwright && npx playwright install chromium`. |
@@ -63,6 +68,7 @@ Density is good, as long as it stays legible. Don't put one sentence in a big bo
    - A choice between options → `compare`. A recommendation goes in a `callout`.
    - A plan over time → `timeline` or `week`. A schedule of short entries → `timeline(items, compact=True)`: one row each, with an optional `cal=dict(date=…)` 6th element.
    - **Many dated events** → **`agenda(events)`**: days in calendar rows that read left → right, one dense row per event; busy days fold after 6 behind "+N more" (`fold_after=`). Never per-day cards in a grid (uneven columns, big gaps).
+   - **Dated events for a chosen set of things over the next few weeks** → **`calendar(events, start, end, groups=…)`**: a Mon–Sun week grid paged a fortnight at a time (a week on phones) that opens on the current week (‹ Earlier / This week / Later ›); equal-width filter buttons per group with a count and an optional small badge on the right, All / None, a toggle for `recurring=True` sessions, and an "announced, no day given" list (`undated=`). Other elements follow the same filter via `data-calx="<key>" data-g="<group>"`; the filter choice is kept per viewer in localStorage.
    - Any dated event can carry **`addcal(title, 'YYYY-MM-DD', start=, end=, venue=, url=)`**: it downloads a one-event `.ics` that opens in any calendar app. `icon=True` gives a round button for dense rows.
    - How-to → `steps`. Detail most readers skip → `fold` or `tabs`.
    - Things with pictures → `icard` in `grid(items, cols=N)`. Pick N so it divides the item count (6 → 3).

@@ -316,6 +316,83 @@ def agenda(events, min_col=420, cal=True, fold_after=6) -> str:
                       if fold_after and len(rows) > fold_after + 1 else '') + '</section>')
     return f'<div class="agenda" style="--agw:{min_col}px">{"".join(out)}</div>'
 
+def calendar(events, start, end, groups=(), key='cal', weeks=2, undated=(), cal=True, tags=(), recurring_label='Weekly sessions',
+             empty='Nothing on') -> str:
+    """Paged week calendar with per-group filters — for "what's on over the next few weeks, for the things I picked".
+    events: dicts {date 'YYYY-MM-DD', title, start?, end?, lead? (bold prefix, e.g. club), meta? (small line), venue?, url?
+    (whole row opens it — use text_link), detail?, group? (id from groups), recurring? (True: dotted, hidden until the
+    recurring toggle is on), flag? (tiny pill after the title, e.g. 'inferred'), cal? (False = no round calendar button)}.
+    start/end: the window; days outside it are dashed. Pages of `weeks` weeks (1 on phones), opening on the week with
+    today in it, so the current week is always first; ‹ Earlier / This week / Later › page through.
+    groups: [{id, label, hue? (0–360), badge? (tiny tag on the right, e.g. 'socials')}] → equal-width filter buttons
+    (tap to hide/show; All / None); the choice is kept per viewer in localStorage under `key`.
+    undated: [{title, lead?, meta?, url?, group?, when? (e.g. '1st week')}] — announced for a period, no day given.
+    Other things on the page that belong to a group (cards, lists) follow the same filter: give them
+    data-calx="<key>" data-g="<group id>". JS lives in template.html (delegated, survives live-share restore)."""
+    from datetime import date as _d, timedelta as _td
+    s, e_ = _d.fromisoformat(start), _d.fromisoformat(end)
+    hue = {}
+    for i, g in enumerate(groups):
+        hue[g['id']] = g.get('hue', round(i * 360 / max(len(groups), 1) + 12) % 360)
+    by, cnt = {}, {}
+    for ev in events:
+        by.setdefault(ev['date'], []).append(ev)
+        if not ev.get('recurring') and ev.get('group'): cnt[ev['group']] = cnt.get(ev['group'], 0) + 1
+    has_rec = any(ev.get('recurring') for ev in events)
+
+    def row(ev):
+        g = ev.get('group') or ''
+        when = (ev.get('start') or 'tbc') + (f"–{ev['end']}" if ev.get('end') and ev.get('start') else '')
+        lead = f'<b>{esc(ev["lead"])}</b> ' if ev.get('lead') else ''
+        flag = f'<i class="calx-flag">{esc(ev["flag"])}</i>' if ev.get('flag') else ''
+        meta = ev.get('meta') or esc(ev.get('venue') or '')
+        inner = f'<span class="calx-t">{when}</span><span class="calx-b">{lead}{esc(ev["title"])}{flag}{f"<small>{meta}</small>" if meta else ""}</span>'
+        a = f'<a class="calx-a" {_link(ev["url"])}>{inner}</a>' if ev.get('url') else f'<div class="calx-a">{inner}</div>'
+        btn = (addcal(((ev.get('lead') + ': ') if ev.get('lead') else '') + ev['title'], ev['date'], icon=True, start=ev.get('start'),
+                      end=ev.get('end') if ev.get('start') else None, venue=ev.get('venue') or '', url=ev.get('url') or '',
+                      detail=ev.get('detail') or '', tags=tuple(ev.get('tags') or tags))
+               if cal and ev.get('cal', True) is not False and not ev.get('recurring') else '')
+        h = hue.get(g, 215)
+        return (f'<li class="calx-ev{" rec" if ev.get("recurring") else ""}"{" hidden" if ev.get("recurring") else ""} data-g="{esc(g)}" '
+                f'style="--h:{h}"{_aid(ev["title"])}>{a}{btn}</li>')
+
+    wks, d = [], s - _td(days=s.weekday())
+    while d <= e_:
+        cells = []
+        for i in range(7):
+            x = d + _td(days=i); iso = x.isoformat(); inw = s <= x <= e_
+            evs = sorted(by.get(iso, []), key=lambda v: (v.get('start') or '99', v.get('lead') or '', v['title']))
+            ul = f'<ul>{"".join(row(v) for v in evs)}</ul>' if evs and inw else ''
+            cells.append(f'<div class="calx-day{"" if inw else " off"}" data-date="{iso}"><h3 class="no-cal">{x:%a} <b>{x:%-d %b}</b></h3>{ul}'
+                         f'<p class="calx-none">{esc(empty)}</p></div>')
+        wks.append(f'<div class="calx-wk" data-from="{d.isoformat()}">{"".join(cells)}</div>')
+        d += _td(days=7)
+    head = '<div class="calx-wk calx-dow" aria-hidden="true">' + ''.join(f'<span>{x}</span>' for x in ('Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun')) + '</div>'
+    flt = ''
+    if groups:
+        flt = '<div class="calx-f" role="group" aria-label="Show">' + ''.join(
+            f'<button type="button" class="calx-g" aria-pressed="true" data-g="{esc(g["id"])}" style="--h:{hue[g["id"]]}">'
+            f'<span class="calx-dot"></span><span class="calx-gl">{esc(g["label"])}</span><small>{cnt.get(g["id"], 0)}</small>'
+            + (f'<span class="calx-badge" title="{esc(g["badge"])}">{esc(g["badge"])}</span>' if g.get('badge') else '') + '</button>'
+            for g in groups) + '</div>'
+    acts = ((f'<button type="button" data-act="rec" aria-pressed="false">{esc(recurring_label)}</button>' if has_rec else '')
+            + ('<button type="button" data-act="all">All</button><button type="button" data-act="none">None</button>' if groups else ''))
+    bar = ('<div class="calx-bar"><div class="calx-nav"><b class="calx-range" aria-live="polite"></b>'
+           '<button type="button" data-nav="prev" aria-label="Earlier weeks">‹ Earlier</button><button type="button" data-nav="today">This week</button>'
+           '<button type="button" data-nav="next" aria-label="Later weeks">Later ›</button></div>'
+           f'<div class="calx-acts"><span class="calx-n"></span>{acts}</div></div>')
+    und = ''
+    if undated:
+        und = '<div class="calx-und"><h3 class="no-cal">Announced, no day given</h3><ul>' + ''.join(
+            f'<li class="calx-ev" data-g="{esc(u.get("group") or "")}" style="--h:{hue.get(u.get("group"), 215)}">'
+            + (f'<a class="calx-a" {_link(u["url"])}>' if u.get('url') else '<div class="calx-a">')
+            + f'<span class="calx-t">{esc(u.get("when") or "day tbc")}</span><span class="calx-b">{"<b>" + esc(u["lead"]) + "</b> " if u.get("lead") else ""}{esc(u["title"])}'
+            + (f'<small>{u["meta"]}</small>' if u.get('meta') else '') + '</span>' + ('</a>' if u.get('url') else '</div>') + '</li>' for u in undated) + '</ul></div>'
+    leg = ('<p class="calx-leg"><span><i></i>Dated event — tap to open where it’s announced; round button adds it to your calendar</span>'
+           + ('<span><i class="r"></i>Regular session (shown with the toggle)</span>' if has_rec else '') + '</p>')
+    return (f'<div class="calx rv" data-key="{esc(key)}" data-weeks="{weeks}" data-start="{start}" data-end="{end}">{flt}'
+            f'<div class="calx-cal">{bar}<div class="calx-grid">{head}{"".join(wks)}</div>{leg}{und}</div></div>')
+
 def compare(cols) -> str:
     """cols: dicts {title, tag?, body?, pros[], cons[], pick?, href?} — with href the whole column is clickable."""
     out = []
@@ -543,6 +620,14 @@ def gallery(out):
         dict(date='2026-10-12', title='Open session', meta='Sports centre · Club B'),
         dict(date='2026-10-13', title='Taster evening', start='19:30', meta='Pub · Club C', url='https://example.com'),
         dict(date='2026-10-14', title='Trials', start='09:00', end='12:00', meta='Track · Club D')], min_col=300)
+    st += '<h3>calendar(): paged weeks + per-group filters (opens on this week)</h3>' + calendar([
+        dict(date='2026-10-10', title='Taster session', start='10:00', end='11:00', lead='Club A', group='a', venue='Sports centre', url='https://example.com'),
+        dict(date='2026-10-11', title='Open evening', start='18:00', lead='Club B', group='b', venue='Hall', flag='members'),
+        dict(date='2026-10-13', title='Beginners class', start='19:00', lead='Club A', group='a', venue='Studio'),
+        dict(date='2026-10-14', title='Weekly practice', start='20:00', end='22:00', lead='Club B', group='b', recurring=True),
+        dict(date='2026-10-20', title='Trials', start='18:00', lead='Club C', group='c', venue='Track')],
+        '2026-10-09', '2026-10-23', groups=[dict(id='a', label='Club A'), dict(id='b', label='Club B', badge='socials'), dict(id='c', label='Club C')],
+        key='gallery', undated=[dict(title='Free tasters', lead='Club C', group='c', when='1st week')])
     st += compare([dict(title='Option A', tag='pick', pick=True, pros=['Cheap', 'Fast'], cons=['Plain']), dict(title='Option B', pros=['Tasty'], cons=['Pricey', 'Slow'])])
     st += steps(['Do this first.', 'Then this.', 'Then this.'], check=True) + note('<p>note(): any prose goes on a card like this, never straight on the page.</p>') + fold('Fold (accordion)', '<p>Hidden detail.</p>')
     st += tabs('demo', [('Day A', '<p>Panel A</p>'), ('Day B', '<p>Panel B</p>')])
